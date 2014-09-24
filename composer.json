@@ -1,5 +1,5 @@
 {
-    "name": "fusesource/stomp-php",
+    "name": "jh-ism-online-webmaster/stomp-php",
     "description": "stomp support for PHP",
     "keywords": ["messaging", "stomp", "jms", "activemq"],
     "homepage": "http://github.com/dejanb/stomp-php",
