@@ -103,24 +103,45 @@ class StompTest extends PHPUnit_Framework_TestCase
     }
 
 
-    public function testWaitForReceiptWillReturnFalseIfConnectionReadTimeoutOccurs()
+    public function testCalculateReceiptWaitEnd()
+    {
+
+        $stomp = new Stomp('http://127.0.0.1/');
+
+        $stomp->setReceiptWait(2.9);
+        $calculateWaitEnd = new ReflectionMethod($stomp, 'calculateReceiptWaitEnd');
+        $calculateWaitEnd->setAccessible(true);
+
+        $now = microtime(true);
+        $result = $calculateWaitEnd->invoke($stomp);
+
+        $this->assertGreaterThan($now, $result, 'Wait end should be in future.');
+
+        $resultDiff = round($result - $now, 1);
+        $this->assertGreaterThanOrEqual($resultDiff, 2.9, 'Wait diff should be greater than /equal to 2.9.');
+    }
+
+
+    /**
+     * @expectedException FuseSource\Stomp\Exception\MissingReceiptException
+     * @expectedExceptionMessage my-expected-receive-id
+     */
+    public function testWaitForReceiptWillThrowExceptionIfConnectionReadTimeoutOccurs()
     {
         $stomp = $this->getStompWithInjectedMockedConnectionReadResult(false);
+        $stomp->setReceiptWait(0);
 
         $waitForReceipt = new ReflectionMethod($stomp, '_waitForReceipt');
         $waitForReceipt->setAccessible(true);
 
-        // expect a receipt but get false
-        $this->assertFalse(
-            $waitForReceipt->invoke($stomp, 'your-id'),
-            'If no frame was returned, wait for receipt should return false.'
-        );
+        // MuT
+        $waitForReceipt->invoke($stomp, 'my-expected-receive-id');
     }
 
     /**
      * Get stomp, configured to use a connection which will return the given result on read.
      *
-     * @param mixed $readFrameResult
+     * @param mixed   $readFrameResult
      * @return Stomp
      */
     protected function getStompWithInjectedMockedConnectionReadResult($readFrameResult)
@@ -263,12 +284,16 @@ class StompTest extends PHPUnit_Framework_TestCase
         $stomp = new Stomp($connection);
 
 
-
-        $result = $stomp->sendFrame(new Frame(), true);
+        try {
+            $stomp->setReceiptWait(0);
+            $stomp->sendFrame(new Frame(), true);
+        } catch (\FuseSource\Stomp\Exception\MissingReceiptException $ex) {
+            // is allowed, since we send no receipt...
+        }
 
         $this->assertInstanceOf('\FuseSource\Stomp\Frame', $lastWriteFrame);
         $this->assertArrayHasKey('receipt', $lastWriteFrame->headers, 'Written frame should have a "receipt" header.');
-        $this->assertFalse($result, 'SendFrame must return false if no receipt frame was returned!');
+
     }
 
 
