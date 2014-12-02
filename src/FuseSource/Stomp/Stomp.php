@@ -110,12 +110,13 @@ class Stomp
      * Constructor
      *
      * @param string|Connection $broker Broker URL or a connection
-     * @throws StompException
+     * @param int               $connectionTimeout TCP timeout of connection
+     *
      * @see Connection::__construct()
      */
-    public function __construct ($broker)
+    public function __construct ($broker, $connectionTimeout = 1)
     {
-        $this->_connection = $broker instanceof Connection ? $broker : new Connection($broker);
+        $this->_connection = $broker instanceof Connection ? $broker : new Connection($broker, $connectionTimeout);
     }
 
     /**
